@@ -1,0 +1,247 @@
+os.loadAPI("cnt/doc")
+  local app = doc.getLibrary(  ) -- get current library 
+app.setCondition (true) --enable gps 
+
+
+local seed_inLen = 5;
+local seed_inWid = 4;
+
+local fuel = app.Fuel_MaterialNames(  ) -- return known fuel
+
+local path_progressHandle = "cnt/progressHandler"
+---------------Objests-----------
+
+
+function GET(SELECT)
+  local  function __GET (ln)
+   return app.getLineValue( path_progressHandle , ln or 1 )  
+  end
+-- return condition in config file 
+    if SELECT == "complete" then 
+      return  __GET (1)
+    elseif  SELECT == "xpos" then 
+       return  __GET (2)
+    elseif SELECT == "ypos"   then 
+        return  __GET (3)
+    elseif SELECT == "zpos" then 
+        return  __GET (4)
+    elseif SELECT == "fpos" then 
+        return  __GET (5)
+    elseif SELECT == "lenght" then 
+        return  __GET (6)
+     elseif SELECT == "width" then 
+        return  __GET (7)   
+    else 
+        print ("Try: xpos, ypos, zpos, fpos, complete\n!:"..tostring(SELECT)..':!')
+    end 
+
+end  
+
+
+function POST( SELECT, post_content )
+  local function __POST ( post_content,ln,index_alert,__type)
+      if __type == type (post_content) then 
+      app.ConfigLineAuto( path_progressHandle , ln or 1 ,index_alert or "-", post_content )
+      else error ("[-"..index_alert.."-] is not "..__type )
+     end
+   end
+     if SELECT == "complete" then 
+        __POST ( post_content,1,"Where are job is complete boolean","boolean")
+    elseif  SELECT == "xpos" then 
+       __POST ( post_content,2,"x position","number")
+    elseif SELECT == "ypos"   then 
+      __POST ( post_content,3,"y position","number")
+    elseif SELECT == "zpos" then 
+      __POST ( post_content,4,"z position","number")
+    elseif SELECT == "fpos" then 
+      __POST ( post_content,5,"f position","number")
+    elseif SELECT == "lenght" then 
+      __POST ( post_content,6,"Query lenght","number")
+     elseif SELECT == "width" then 
+      __POST ( post_content,7,"Query width","number")  
+    else 
+        print ("Try: xpos, ypos, zpos, fpos, complete\nerror-[!:"..tostring(SELECT)..':!]')
+    end 
+    if post_content== nil then print "No content to post" end 
+end
+
+
+
+
+local function up ()
+while not  app.up()  do turtle.digUp() end 
+end
+local function down()
+while not  app.down() do turtle.digDown() sleep(.3) end 
+end
+local function forward()
+    while not app.forward() do turtle.dig()  sleep (0) end 
+end
+local function left(  )
+  app.left()
+end
+function right(  )
+  app.right()
+end
+
+
+
+--Checkers 
+local function home(  )
+  if  app.get_x(  ) == 0 and  app.get_y(  ) == 0 and  app.get_z(  ) == 0 then 
+     return true
+  end  
+end
+
+local function proceed_home(  )
+   if  ( app.get_x(  ) + app.get_y(  ) + app.get_z(  )) > (app.fuelTotal(  ) + turtle.getFuelLevel()) then 
+      app.danger "Cannot continue , fuel missing !!"
+         return false
+   end 
+   return true
+end
+
+local function reset(  )
+  app.set_x (0)
+  app.set_y (0)
+  app.set_z (0)
+  app.set_f (1)
+  app.success "Reset applied "
+end
+
+local function inportChest ()
+
+local isChest =  app.inspectThis ("bottom",chest);
+  
+  if not isChest then 
+      app.warning "No inport chest in bottom !"
+      app.alert "Cheking ... " sleep(0.4)
+      local where_chest = app.selectThis(chest)
+        
+        if where_chest then 
+           app.success ("Chest found ..")sleep(0.4)
+           app.alert "Prepare place inport chest" sleep(0.5)           
+           turtle.digDown() 
+           turtle.select(where_chest)
+             if turtle.placeDown() then 
+               app.success " Complete ! "
+               else say.danger "Unaible to place chest "; return false  end
+             
+         else app.danger "No chest in invetory" return false  end   
+    end
+  turtle.select(1)
+  while turtle.suckDown() do end -- suck all items from inport chest
+  return true
+end
+
+
+
+ 
+ 
+
+
+local function dropItems(  )
+  local available_seed = (seed_inLen*seed_inWid)
+  local available_dirt = available_seed
+   local available_fuel = (seed_inLen*seed_inWid)
+   
+
+         if app.fuelTotal(  ) > available_fuel then  
+           app.warning "Droping fuel/wood overflow"
+          app.valueDropLess((app.fuelTotal(  )-available_fuel) ,"Front" ) 
+          app.success "Successfuly droped fuel/wood .."
+         end
+
+     app.alert "Droping last items"    
+        for slt = 1,16 do 
+            local isSeed = app.isListedRequestSlot(slt , seed_ )
+            local isFuel = app.isListedRequestSlot(slt , fuel )
+            local isDirt = app.isListedRequestSlot(slt , dirt )
+            -- print ("slot: ",slt," == ",not (isSapling or isLog)) sleep(2)
+            if turtle.getItemCount (slt) > 0 and not (isSeed or isFuel or isDirt) then turtle.select (slt); turtle.drop() end
+
+        end 
+     app.success "Complete droping odd items .."  
+     sleep (2)
+     turtle.select (1) 
+end
+
+local function str(  )
+   local x,z = term.getCursorPos()
+   local xSize,zSize = term.getSize()
+   return string.rep ("-",xSize-x)
+end
+
+
+app.clear()
+
+
+
+
+if not GET ("complete") then 
+-- check to continue current job  
+   app.alert "Return home"
+   app.goto (0,0,0)
+   app.look("SOUTH")
+   app.warning ("Available ".."x:"..GET("xpos").." y:"..GET("ypos").." z:"..GET("zpos") )
+   
+   if app.acceptedUser( "Continue" ) then 
+        if (GET("xpos")+GET("ypos")+GET("zpos")) < (app.fuelTotal () + turtle.getFuelLevel() ) then 
+        
+         if   app.acceptedUser( "Reset turtle" ) then reset () end
+
+          app.alert ("Progress is continue")
+          app.goto (GET("xpos"),GET("ypos"),GET("zpos"))
+          app.look (app.toNameOrientation( GET("fpos") ) )
+       
+       else app.danger "Not enauth fuel"
+          return 
+       end 
+    else  
+       if app.acceptedUser( "Are you shure delete progress" ) then
+           
+           if app.acceptedUser( "Return home" ) and proceed_home(  )  then 
+            app.success ("Ok")
+            app.goto(0,0,0)
+           app.look("SOUTH")
+           end  
+           app.alert ("Progress is breaked") 
+           POST( "complete", true )
+           POST( "xpos", 0 )
+           POST( "ypos", 0 )
+           POST( "zpos", 0 )
+           POST( "fpos", 1 )
+           reset(  )
+         return
+       end
+   end  
+end  
+
+-- condition allowed to control execution of query mining job
+local execureQuery = false
+
+if GET ("complete") then 
+-- contine set new job 
+    if app.acceptedUser( "Start new Query" ) then 
+       --set width lenght
+       app.alert ("Dimensions ")
+local lenght = app.getNInput( "width", app.NumberElipse( 30, 1  ) )
+local width = app.getNInput( "lenght", app.NumberElipse( 30, 1  ) )
+       print ("width :"..width)
+       print ("lenght :"..lenght)
+       -- POST( "width", post_content )
+       -- POST( "lenght", post_content )
+    else
+      print "Query not started"
+    end  
+end  
+
+
+
+if not GET ("complete") then 
+  print "Do the job"
+
+end  
+
+-- app.getNInput(  "txt2","history2" )
+-- app.getNInput(  "txt3","history3" )
