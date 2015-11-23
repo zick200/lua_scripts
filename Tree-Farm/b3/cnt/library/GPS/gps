@@ -220,7 +220,7 @@ end
    local refuelvalue = 1
    if turtle.getFuelLevel() <=fuelLevel then 
      -- print ("Fuel is below "..fuelLevel..".")
-     refuelLib.RefuelByValue( 1 ) -- Refuel items from inventory
+    refuel.values( 35 ) -- Refuel items from inventory
      turtle.select(1)
   end 
  end

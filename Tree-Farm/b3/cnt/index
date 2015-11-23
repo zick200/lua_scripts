@@ -1,25 +1,30 @@
 os.loadAPI("cnt/doc")
   local app = doc.getLibrary(  ) -- get current library 
-app.setCondition (true) --enable gps 
+  app.setCondition (true)
 
-local seed_inLen = 7;
-local seed_inWid = 11;
-local sleep_time = 600 --seconds
+local tree_inLen = 3;
+local tree_inWid = 4;
+local tree_inGap = 2;
 
-local seed_ = {"minecraft:wheat_seeds"}
-local wheat = {"minecraft:wheat"}
-local water = {"minecraft:flowing_water","minecraft:water"}
+local sleep_time = 120 --seconds
+
+local sapl = {
+  "minecraft:sapling",
+  "IC2:blockRubSapling",
+  "MineFactoryReloaded:rubberwood.sapling"
+  };
+
 local chest = {
 "minecraft:chest",
 "minecraft:trapped_chest"
 };
 
 local dirt = {"minecraft:dirt"}
-
-local fuel = app.Fuel_MaterialNames(  ) -- return known fuel
-
-
----------------Objests-----------
+--to check and compare whe is to much
+local log ={
+"minecraft:log",
+"MineFactoryReloaded:rubberwood.log"
+}
 
 local function up ()
 while not  app.up()  do turtle.digUp() end 
@@ -28,7 +33,10 @@ local function down()
 while not  app.down() do turtle.digDown() sleep(.3) end 
 end
 local function forward()
+  for tree_Gap=1,tree_inGap do
     while not app.forward() do turtle.dig()  sleep (0) end 
+  end
+  turtle.suckDown()
 end
 local function left(  )
   app.left()
@@ -47,7 +55,11 @@ local function home(  )
 end
 
 local function proceed_home(  )
-   if  ( app.get_x(  ) + app.get_z(  ) ) > (app.fuelTotal(  ) + turtle.getFuelLevel()) then 
+      
+   if  ( app.get_x(  ) + 
+   app.get_z(  ) ) > 
+   (app.fuelTotal(  ) + turtle.getFuelLevel()) then 
+      
       app.danger "To going back requare more fuel ..."
          return false
    end 
@@ -55,8 +67,8 @@ local function proceed_home(  )
 end
 
 
-local function proceed_wheatfarm (more)
-  local asn = (seed_inLen*seed_inWid) + (more or 0)
+local function proceed_treefarm (more)
+  local asn = (tree_inLen*tree_inWid)*tree_inGap + (more or 0)
   local tt = app.fuelTotal(  ) + turtle.getFuelLevel()
     if asn > tt then 
         say.danger ("Missinng "..(asn - tt ).." fuel to continue ...") return false
@@ -65,7 +77,7 @@ local function proceed_wheatfarm (more)
 end
 
 local function size_treefarm(  )
-   app.alert ("Wheat farm Wid: "..(seed_inWid).. ", Len: "..(seed_inLen)  )
+   app.alert ("Tree farm Wid: "..(tree_inWid*tree_inGap).. ", Len: "..(tree_inLen*tree_inGap)  )
 end
 ----
 local function reset(  )
@@ -73,7 +85,7 @@ local function reset(  )
   app.set_y (0)
   app.set_z (0)
   app.set_f (1)
-  app.success ">Reset applied "
+  app.success "Reset applied "
 end
 
 local function inportChest ()
@@ -102,76 +114,92 @@ local isChest =  app.inspectThis ("bottom",chest);
 end
 
 
+local function sapling ()
+  
+  local where_sapling = app.selectThis(sapl)
+  local isSapling = app.inspectThis("bottom",sapl)
 
-local function seed(  )
+  if not isSapling and
+   not where_sapling then 
+    app.warning "Checking saplings ..."  turtle.suckUp() ; turtle.suck();turtle.suckDown()
+     where_sapling = app.selectThis (sapl)
+      
+      if where_sapling then
+        app.success "Sapling found!"
+      else
+               app.danger "Unaible to find eny sapling !"  return false;
+      end
+   end
  
-  -- Chech if wheat is gown 
-  local _,data = turtle.inspectDown()
-  if data.metadata and data.metadata >=7 then app.success ("Weat is Fully grown like "..data.metadata.." ..") turtle.digDown() end
+   if where_sapling then 
+      
+      turtle.select( where_sapling)
+      
+      -- if try place sapling and failed try place dirt
+      if  not isSapling  and  
+      not turtle.placeDown() then 
+        
+        app.warning "Failed place sapling .." 
+        app.warning "Checking dirt .."
+        local dirt = {"minecraft:dirt"}
+        local where_dirt = app.selectThis(dirt)           
+          if where_dirt then 
+            app.success "Dirt found .."
+            down ()
+             turtle.digDown()
+             turtle.select(where_dirt)
+               
+               if turtle.placeDown() then
+                 app.success "Placed dirt"
+                 else app.danger "Unable to place dirt bottom !" ; up() return false
+               end
+            up()
+            say.alert "Place sapling"
+            turtle.select(where_sapling)
+            turtle.placeDown()
+            else app.danger "Unable to find dirt"  return false;
+          end
+        
+        
+      end
+   end   
 
-  local where_seed = app.selectThis (seed_)
-   local where_dirt = app.selectThis (dirt)
-  
-   local isWheat = app.inspectThis("bottom", wheat )  
-     if not where_seed and not isWheat then 
-          app.warning "Unable to  find seed .." return false
-     end 
+return true
+end
 
+local function tree ()
+  local wasTreeTall = 0
+  local tree_tall = 8
+  if app.inspectThis ("top",log) then 
+      while app.inspectThis ("top",log) do turtle.digUp() up() wasTreeTall = wasTreeTall + 1 sleep(0) end
+      
+      if tree_tall == wasTreeTall then turtle.select (app.selectThis(dirt)) turtle.placeUp() end
 
-     if where_seed and not isWheat then 
-        turtle.select (where_seed)
-        if not turtle.placeDown () then 
-          app.warning "Cannot place seed .."
-          app.alert "Try humuse .."
-           local humuse = turtle.digDown()
-            if humuse then turtle.select (app.selectThis(seed_)) turtle.placeDown() end
-             if not humuse then 
-                app.warning ("Failed humuse  "..tostring( app.SortString( {app.inspectSide( "bottom" )} ) ) )
-                app.alert "Prepare replace with dirt !"
-                if  turtle.detectDown()  then app.warning ("I cannot move down because got "..app.SortString ({app.inspectSide("bottom")}).."") return false end
-                if where_dirt then 
-                  app.success "Dirt found, moving !"
-                  down() sleep (.1)
-
-  
-
-                     if app.inspectThis("bottom", water ) then 
-                      app.alert "Water was ignored" up()  return true end
-                      turtle.select (where_dirt)
-                       if turtle.placeDown() then 
-                          app.success "Successfuly place dirt"
-                            up()
-                             app.alert "Also humuse and place seed .."
-                            turtle.digDown(); turtle.select(where_seed) turtle.placeDown() 
-                           return true
-                        else app.danger "Unaible to place dirt !"; up() return false
-                        end 
-                else app.danger "Cannot find dirt !" return false
-                end  
-             end 
-          end  
-       end 
-     return true
+      for _ = 1, wasTreeTall do down() end 
+       turtle.digDown() -- when need place to sapling
+       return true
+  end
+  return false
 end
 
 
+
 local function dropItems(  )
-  local available_seed = (seed_inLen*seed_inWid)
-  local available_dirt = available_seed
-   local available_fuel = (seed_inLen*seed_inWid)
+  local available_sapling = (tree_inLen*tree_inWid)
+  local available_dirt = available_sapling
+   local available_fuel = (tree_inLen*tree_inWid)*(tree_inGap+1)
    
    local x = 0 
-   app.warning "Droping seed overflow"
+   app.warning "Droping sapling overflow"
    
    for slt =1,16 do
-       if app.isListedRequestSlot(slt , seed_ ) then 
+       if app.isListedRequestSlot(slt , sapl ) then 
         x = x + turtle.getItemCount(slt)
-         if x > available_seed and turtle.getItemCount(slt)>0 then turtle.select (slt) turtle.drop((x-available_seed) <= 64 
-            and x-available_seed or 64 ) end
+         if x > available_sapling and turtle.getItemCount(slt)>0 then turtle.select (slt) turtle.drop((x-available_sapling) <= 64 
+            and x-available_sapling or 64 ) end
        end 
    end
-   app.success "Successfuly droped seed ..." sleep (.5)
-   
+   app.success "Successfuly droped saplings ..." sleep (.5)
     local x = 0 
    app.warning "Droping dirt overflow"
     for slt =1,16 do
@@ -181,21 +209,20 @@ local function dropItems(  )
             and x-available_dirt or 64 ) end
        end 
    end
-   -- app.success "Successfuly droped dirt"; sleep (.56)
+   app.success "Successfuly droped dirt"; sleep (.56)
 
-   --       if app.fuelTotal(  ) > available_fuel then  
-   --         app.warning "Droping fuel/wood overflow"
-   --        app.valueDropLess((app.fuelTotal(  )-available_fuel) ,"Front" ) 
-   --        app.success "Successfuly droped fuel/wood .."
-   --       end
-
-   --   app.alert "Droping last items"    
+         if app.fuelTotal(  ) > available_fuel then  
+           app.warning "Droping fuel/wood overflow"
+          app.valueDropLess((app.fuelTotal(  )-available_fuel) ,"Front" ) 
+          app.success "Successfuly droped fuel/wood .."
+         end
+     app.alert "Droping last items"    
         for slt = 1,16 do 
-            local isSeed = app.isListedRequestSlot(slt , seed_ )
-            local isFuel = app.isListedRequestSlot(slt , fuel )
+            local isSapling = app.isListedRequestSlot(slt , sapl )
+            local isLog = app.isListedRequestSlot(slt , log )
             local isDirt = app.isListedRequestSlot(slt , dirt )
             -- print ("slot: ",slt," == ",not (isSapling or isLog)) sleep(2)
-            if turtle.getItemCount (slt) > 0 and not (isSeed or isFuel or isDirt) then turtle.select (slt); turtle.drop() end
+            if turtle.getItemCount (slt) > 0 and not (isSapling or isLog or isDirt) then turtle.select (slt); turtle.drop() end
 
         end 
      app.success "Complete droping odd items .."  
@@ -203,66 +230,67 @@ local function dropItems(  )
      turtle.select (1) 
 end
 
-local function str(  )
-   local x,z = term.getCursorPos()
-   local xSize,zSize = term.getSize()
-   return string.rep ("-",xSize-x)
-end
-
-function assert_ ()
-  assert (inportChest (),str()) 
-  assert (proceed_wheatfarm (seed_inWid+seed_inLen+( (seed_inWid+seed_inLen)*2 )),str()) --up and down
-end
-
-
- 
-
-          
+  local err = "-----------------------"
 
 app.clear()
-app.special ("Wheat farm is running .. \nand wating redstone inputs ")
+print "Starting program.. \nand waiting redstone input "
+
 while true do 
-           if  not home(  ) then 
+     
+         assert (proceed_home(  ),err)
+          if  not home(  ) then 
+             app.success("I just travel home")
+             app.goto (app.get_x(  ) +1 ,0,math.floor(app.get_z(  )) )
+             app.goto (app.get_x(  ),0,math.floor(app.get_z(  )-1))
+             -- app.goto (1,0,-1)
              app.goto (0,0,0)
              app.look("SOUTH")
           end  
--- returtn 
- 
- 
 
-while not rs.getInput("left") and not rs.getInput("right") do sleep(0) end
 
- size_treefarm(  )
- assert_ ()
-  
-app.alert "Wating 10s, please select order .."
-sleep (10) 
-  
-  if rs.getInput ("right") and rs.getInput("left")  then 
-    app.alert "Sleep timer running ..." sleep(sleep_time)
-   elseif rs.getInput ("right") then 
-     reset ()
-  end 
-  
-  
-  if rs.getInput ("left") then 
-    right() right () dropItems(  ) right () right()
-    app.alert "Farming >.."
-    forward () -- pusht one block forward
-    for seed_wid=1,seed_inWid do 
-         seed(  )
-        forward ()
-         seed(  )
-      for seed_len=1,seed_inLen-2 do 
-        forward ()
-        seed(  )
-      end
-     if seed_wid % 2 == 0 then left() forward() left ()
-                          else  right() forward() right()
-     end 
+-- Balance selection
+ while not (rs.getInput("right") or rs.getInput("left")) do sleep (.4) end
+ app.warning "Waiting 10s , please select order .."
+ sleep (10)
+   
+    if rs.getInput("right") and not rs.getInput("left") then
+      reset(  )
+    end  
+    
+    if rs.getInput("right") and rs.getInput("left") then 
+      app.warning "Sleep timer running ..."
+      sleep( sleep_time )
+    end  
+
+   if rs.getInput("left") then       
+       assert ( proceed_treefarm () ,err )
+       assert (inportChest (),err)
+    
+     left () left ()
+     dropItems(  )
+     left () left ()
+    -- proceed_home(  )
+
+   turtle.select (1)
+   while turtle.suckDown() do end 
+   -- Go as default from base
+   forward()
+    for tree_Wid=1,tree_inWid do
+        tree () 
+       sapling () 
+       for tree_Len=1,tree_inLen -1 do
+           -- forward while by gaps
+           forward()
+           assert (proceed_home(  ),err) -- if not enouch
+           tree ()  
+           -- if not tree then sapling or tree then sapling 
+           sapling ()  
+       end
+       if tree_Wid % 2 == 0 then 
+          left(  ) forward() left()
+       else
+         right(  ) forward () right()
+       end 
     end
-   app.success ("Complete cycle !")
-   -- turtle.select (app.selectThis (dirt)) turtle.placeDown()
-  end
-
-end 
+ end 
+end

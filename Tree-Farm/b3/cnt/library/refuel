@@ -36,6 +36,7 @@ function count_fuel(  )
 	 return count
 end
 
+
 function find_fuel_nameSlot(  slot  )
    		  for item=1,#material.turtlefuel do
 			   	 if  requestAPI.getDataName  (slot) == material.turtlefuel[item].name then 
@@ -52,6 +53,9 @@ function find_fuel_valueSlot(  slot  )
 		  end 	   	 	
 	return false 
 end
+
+
+
 function find_fuel_indexSlot(  slot  )
    		  for item=1,#material.turtlefuel do
 			   	 if  requestAPI.getDataName  (slot) == material.turtlefuel[item].name then 
@@ -95,14 +99,6 @@ function FindFuelValue( value )
  		end 
  		return false
  end
--- return material where are known as fuel
-function Fuel_MaterialNames(  )
-	local tb = {}
-	for index,names in ipairs(material.turtlefuel) do
-		tb[index] = names.name
-	end
-return tb
-end
 
 function fuelList(  )
 	local tb = {}
@@ -125,6 +121,8 @@ local  count = 0
 	end
 	return count 
 end
+
+
 
  -- fuelTotal(  )
 -- always refuel by value   like 81 refuel two items
@@ -166,8 +164,11 @@ local val = 0
 end
 
 function values( refuelvalue )
+print ("Refueled !")
 	return value( refuelvalue,1 )
 end
+
+
 
 function valueEqual( refuelvalue )
 	return value( refuelvalue,0 )

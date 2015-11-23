@@ -5,6 +5,7 @@ turtlefuel = {
 		[3] = {name = "minecraft:planks" , value = 15 };
 		[4] = {name = "minecraft:log" , value = 15 };
 		[5] = {name = "minecraft:coal_block" , value = 800 };
+  [6] = {name = "MineFactoryReloaded:rubberwood.log", value = 15};
 }
 
 --- look when digging

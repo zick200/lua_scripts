@@ -52,18 +52,23 @@ local function setHomeCoord( x , y, z , f , C, chest, arrive,ROLE )
 end
 
 local function Accepted(  )
+	local tryedDisks = 2;
             HomeCoordProgram.SET.HomeCoordData(true) -- set true if is id equal to this computer 
     		--take data from disk2
     		turtle.turnRight()
 				sleep(.5)
 			copy ("disk2/JOBO/moreFile2", "moreFile2")
 			turtle.turnLeft()
-			if not  fs.exists ("moreFile2/programs/travel") then 
-					say.danger "I not copy disk2, try again!"
+			while not  fs.exists ("moreFile2/programs/travel") and tryedDisks < 6 do
+					say.danger ("I not copy disk2, try "..tryedDisks.." again!")
 					turtle.turnRight()
-						sleep(.5)
-						copy ("disk2/JOBO/moreFile2", "moreFile2")
+						sleep(1)
+						-- Sometime disk have higher number
+						copy ("disk"..tryedDisks.."/JOBO/moreFile2", "moreFile2")
+					sleep(1)
 					turtle.turnLeft()
+					-- Bug updated 2015-10-12 with try Disk While is incorrect 
+					tryedDisks = tryedDisks + 1;
 			end 	
 end
 
